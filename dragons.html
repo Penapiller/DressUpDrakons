@@ -118,6 +118,10 @@
 
   .layer-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color .12s; }
   .layer-card.selected{ border-color:var(--pink); box-shadow: 0 0 0 1px var(--pink); }
+  .layer-card.is-base{ border-color:var(--teal); }
+  .layer-card.is-base.selected{ border-color:var(--pink); }
+  .layer-card.is-base .layer-head{ background:rgba(79,224,200,0.07); }
+  .lib-locked{ font-size:11px; color:var(--ink-dim); line-height:1.6; padding:14px 4px; text-align:center; }
   .layer-head{ display:flex; align-items:center; gap:6px; padding:8px 8px; }
   .icon-btn{
     background:none; border:1px solid var(--line); color:var(--ink-dim);
@@ -320,9 +324,9 @@
 
     <!-- LEFT: layers -->
     <div class="panel">
-      <h2>LAYERS <small>stacked bottom → top</small></h2>
+      <h2>YOUR DRAGON <small>drop one image, then add items from the library below</small></h2>
       <div class="drop" id="dropLayer">
-        <span>+ Add layer (drop PNG or click)</span>
+        <span>+ Add your dragon (drop PNG or click)</span>
         <input type="file" id="layerInput" accept="image/png,image/*">
       </div>
 
@@ -398,7 +402,7 @@
   </div>
 
   <div class="panel" id="libraryPanel" style="margin-top:16px;">
-    <h2>IMAGE LIBRARY <small>click a thumbnail to add it as a new layer</small></h2>
+    <h2>IMAGE LIBRARY <small>click a thumbnail to add it as an item on your dragon</small></h2>
     <input type="text" id="librarySearch" placeholder="Search library by name…" class="lib-search">
     <div class="library-grid" id="libraryGrid"></div>
 
@@ -500,6 +504,7 @@
   let hexes = {};         // id -> {sectionId: hex}
   let offsets = {};       // id -> {x, y} pixel offset
   let selectedId = null;  // currently selected layer for repositioning
+  let baseLayerId = null; // the single dropped "dragon" layer; colors on it are locked
   let nextId = 1;
   const expanded = new Set();
 
@@ -567,15 +572,18 @@
 
   // ---------- history ----------
   function snapshotState(){
-    return JSON.parse(JSON.stringify({ order, visible, hexes, offsets }));
+    return JSON.parse(JSON.stringify({ order, visible, hexes, offsets, baseLayerId }));
   }
   function restoreState(s){
     order = s.order.slice(); visible = {...s.visible}; hexes = JSON.parse(JSON.stringify(s.hexes));
     offsets = JSON.parse(JSON.stringify(s.offsets || {}));
+    baseLayerId = s.baseLayerId || null;
     if(selectedId && order.indexOf(selectedId) === -1) selectedId = null;
     recomputeProjectSize();
     syncCanvasPixelSize();
     buildLayerListUI();
+    refreshLibrary();
+    updateDropZoneLabel();
     renderAll();
     updateHistoryButtons();
   }
@@ -656,11 +664,12 @@
     dropEl.addEventListener('drop', e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) onFile(f); });
   }
 
-  function addLayerFromFile(file, displayName){
-    loadImageFromFile(file, img=> addLayerFromImage(img, displayName || file.name));
+  function addLayerFromFile(file, displayName, opts){
+    loadImageFromFile(file, img=> addLayerFromImage(img, displayName || file.name, opts));
   }
 
-  function addLayerFromImage(img, name){
+  function addLayerFromImage(img, name, opts){
+    const isBase = !!(opts && opts.isBase);
     const wasEmpty = order.length === 0;
     // Draw at the image's own native pixel size — no resampling, no forced scaling.
     const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
@@ -674,16 +683,29 @@
     const { clusterIdByPixel, sections } = detectClusters(imageData, tol);
 
     const id = 'L' + (nextId++);
-    registry[id] = { name, w, h, imageData, clusterIdByPixel, baseSections: sections };
+    registry[id] = { name, w, h, imageData, clusterIdByPixel, baseSections: sections, isBase };
     const initHex = {};
     sections.forEach(s => initHex[s.id] = s.hex);
 
     pushHistory();
-    order.push(id);
+
+    if(isBase && baseLayerId && registry[baseLayerId]){
+      // Dropping a new dragon image replaces the current one (registry entry is
+      // kept around, untouched, so undo can still bring the old one back).
+      order = order.filter(x => x !== baseLayerId);
+      if(selectedId === baseLayerId) selectedId = null;
+    }
+
+    if(isBase){
+      order.unshift(id); // the dragon always sits at the very back
+      baseLayerId = id;
+    } else {
+      order.push(id);
+      expanded.add(id);
+    }
     visible[id] = true;
     hexes[id] = initHex;
     offsets[id] = { x: 0, y: 0 };
-    expanded.add(id);
     selectedId = id;
 
     recomputeProjectSize();
@@ -695,15 +717,32 @@
       applyZoom();
     }
     buildLayerListUI();
+    refreshLibrary();
+    updateDropZoneLabel();
     renderAll();
   }
 
-  wireDrop(dropLayer, layerInput, file => addLayerFromFile(file));
+  wireDrop(dropLayer, layerInput, file => addLayerFromFile(file, null, {isBase:true}));
+
+  function updateDropZoneLabel(){
+    const span = dropLayer.querySelector('span');
+    if(baseLayerId && registry[baseLayerId]){
+      span.textContent = '🐉 ' + registry[baseLayerId].name + ' — drop or click to replace';
+    } else {
+      span.textContent = '+ Add your dragon (drop PNG or click)';
+    }
+  }
+
+  function refreshLibrary(){
+    buildLibraryUI(document.getElementById('librarySearch').value);
+  }
 
   function moveLayer(id, dir){
+    if(id === baseLayerId) return; // the dragon is pinned at the back
     const idx = order.indexOf(id);
     const target = idx + (dir === 'up' ? 1 : -1);
     if(target < 0 || target >= order.length) return;
+    if(order[target] === baseLayerId) return; // items never move behind the dragon
     pushHistory();
     [order[idx], order[target]] = [order[target], order[idx]];
     buildLayerListUI();
@@ -719,9 +758,12 @@
     pushHistory();
     order = order.filter(x => x !== id);
     if(selectedId === id) selectedId = null;
+    if(baseLayerId === id) baseLayerId = null;
     recomputeProjectSize();
     syncCanvasPixelSize();
     buildLayerListUI();
+    refreshLibrary();
+    updateDropZoneLabel();
     renderAll();
   }
   function renameLayer(id, newName){
@@ -790,7 +832,7 @@
   function buildLayerListUI(){
     layersEl.innerHTML = '';
     if(order.length === 0){
-      layersEl.innerHTML = '<div class="empty-note">No layers yet — add your first PNG above.</div>';
+      layersEl.innerHTML = '<div class="empty-note">No dragon yet — drop or click above to add one.</div>';
       updateRepoUI();
       return;
     }
@@ -803,13 +845,24 @@
       const isBottom = idx === 0;
       const isExpanded = expanded.has(id);
 
+      const isBaseLayer = !!reg.isBase;
+
       const card = document.createElement('div');
-      card.className = 'layer-card' + (id === selectedId ? ' selected' : '');
+      card.className = 'layer-card' + (id === selectedId ? ' selected' : '') + (isBaseLayer ? ' is-base' : '');
       card.addEventListener('click', ()=> selectLayer(id));
 
       const head = document.createElement('div');
       head.className = 'layer-head';
-      head.innerHTML = `
+      head.innerHTML = isBaseLayer ? `
+        <div class="order-btns">
+          <button class="icon-btn" data-act="up" disabled title="The dragon always stays at the back">▲</button>
+          <button class="icon-btn" data-act="down" disabled title="The dragon always stays at the back">▼</button>
+        </div>
+        <input type="checkbox" class="vis-toggle" ${visible[id] ? 'checked' : ''} title="Show/hide dragon">
+        <input type="text" class="layer-name" value="${reg.name.replace(/"/g,'&quot;')}">
+        <span class="icon-btn" title="This is your dragon — its colors are locked" style="cursor:default;">🔒</span>
+        <button class="icon-btn danger" data-act="remove" title="Remove dragon layer">✕</button>
+      ` : `
         <div class="order-btns">
           <button class="icon-btn" data-act="up" ${isTop?'disabled':''} title="Bring forward">▲</button>
           <button class="icon-btn" data-act="down" ${isBottom?'disabled':''} title="Send backward">▼</button>
@@ -821,45 +874,53 @@
       `;
       card.appendChild(head);
 
-      const body = document.createElement('div');
-      body.className = 'layer-body' + (isExpanded ? '' : ' collapsed');
-      const secWrap = document.createElement('div');
-      reg.baseSections.forEach(s=>{
-        const hex = hexes[id][s.id] || s.hex;
-        const row = document.createElement('div');
-        row.className = 'sec-row';
-        row.innerHTML = `
-          <div class="swatch-wrap"><input type="color" value="${hex}" data-sec="${s.id}"></div>
-          <div class="sec-meta">
-            <div class="sec-name">Section ${s.id+1}</div>
-            <input class="sec-hex" data-sec="${s.id}" value="${hex}">
-          </div>
-        `;
-        secWrap.appendChild(row);
-      });
-      body.appendChild(secWrap);
+      let body = null;
+      if(!isBaseLayer){
+        body = document.createElement('div');
+        body.className = 'layer-body' + (isExpanded ? '' : ' collapsed');
+        const secWrap = document.createElement('div');
+        reg.baseSections.forEach(s=>{
+          const hex = hexes[id][s.id] || s.hex;
+          const row = document.createElement('div');
+          row.className = 'sec-row';
+          row.innerHTML = `
+            <div class="swatch-wrap"><input type="color" value="${hex}" data-sec="${s.id}"></div>
+            <div class="sec-meta">
+              <div class="sec-name">Section ${s.id+1}</div>
+              <input class="sec-hex" data-sec="${s.id}" value="${hex}">
+            </div>
+          `;
+          secWrap.appendChild(row);
+        });
+        body.appendChild(secWrap);
 
-      const foot = document.createElement('div');
-      foot.className = 'layer-foot';
-      foot.innerHTML = `<button data-act="rescan">Re-scan sections</button><button data-act="resetcolors">Reset colors</button>`;
-      body.appendChild(foot);
+        const foot = document.createElement('div');
+        foot.className = 'layer-foot';
+        foot.innerHTML = `<button data-act="rescan">Re-scan sections</button><button data-act="resetcolors">Reset colors</button>`;
+        body.appendChild(foot);
 
-      card.appendChild(body);
+        card.appendChild(body);
+      }
       layersEl.appendChild(card);
 
       // wire head controls
-      head.querySelector('[data-act="up"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'up'); });
-      head.querySelector('[data-act="down"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'down'); });
+      if(!isBaseLayer){
+        head.querySelector('[data-act="up"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'up'); });
+        head.querySelector('[data-act="down"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'down'); });
+      }
       head.querySelector('.vis-toggle').addEventListener('click', e=> e.stopPropagation());
       head.querySelector('.vis-toggle').addEventListener('change', ()=> toggleVisible(id));
       head.querySelector('[data-act="remove"]').addEventListener('click', e=>{ e.stopPropagation(); removeLayer(id); });
+      const nameInput = head.querySelector('.layer-name');
+      nameInput.addEventListener('change', ()=> renameLayer(id, nameInput.value.trim() || reg.name));
+
+      if(isBaseLayer) return;
+
       head.querySelector('[data-act="expand"]').addEventListener('click', e=>{
         e.stopPropagation();
         if(expanded.has(id)) expanded.delete(id); else expanded.add(id);
         selectLayer(id);
       });
-      const nameInput = head.querySelector('.layer-name');
-      nameInput.addEventListener('change', ()=> renameLayer(id, nameInput.value.trim() || reg.name));
 
       // wire section color controls
       body.querySelectorAll('input[type=color]').forEach(inp=>{
@@ -886,8 +947,8 @@
           renderAll();
         });
       });
-      foot.querySelector('[data-act="rescan"]').addEventListener('click', ()=> rescanLayer(id));
-      foot.querySelector('[data-act="resetcolors"]').addEventListener('click', ()=> resetLayerColors(id));
+      body.querySelector('[data-act="rescan"]').addEventListener('click', ()=> rescanLayer(id));
+      body.querySelector('[data-act="resetcolors"]').addEventListener('click', ()=> resetLayerColors(id));
     });
     updateRepoUI();
   }
@@ -897,6 +958,10 @@
     const grid = document.getElementById('libraryGrid');
     const term = (filterTerm || '').trim().toLowerCase();
     grid.innerHTML = '';
+    if(!baseLayerId || !registry[baseLayerId]){
+      grid.innerHTML = '<div class="lib-locked">Add your dragon above first — then click images here to add them as items.</div>';
+      return;
+    }
     if(PREMADE_LIBRARY.length === 0){
       grid.innerHTML = '<div class="empty-note">No premade images yet — see the PREMADE_LIBRARY array near the top of the script.</div>';
       return;
@@ -934,10 +999,10 @@
       card.appendChild(label);
 
       if(!isEmpty){
-        card.title = 'Click to add "' + item.name + '" as a new layer';
+        card.title = 'Click to add "' + item.name + '" as an item on your dragon';
         card.addEventListener('click', ()=>{
           const img = new Image();
-          img.onload = () => addLayerFromImage(img, item.name);
+          img.onload = () => addLayerFromImage(img, item.name, {isBase:false});
           img.src = item.src;
         });
       }
@@ -1007,6 +1072,7 @@
     if(order.length === 0) return;
     pushHistory();
     order.forEach(id=>{
+      if(id === baseLayerId) return; // the dragon's colors are locked
       registry[id].baseSections.forEach(s=>{
         const r = Math.floor(Math.random()*200+30), g = Math.floor(Math.random()*200+30), b = Math.floor(Math.random()*200+30);
         hexes[id][s.id] = rgbToHex(r,g,b);
@@ -1019,6 +1085,7 @@
     if(order.length === 0) return;
     pushHistory();
     order.forEach(id=>{
+      if(id === baseLayerId) return; // the dragon's colors are locked
       const initHex = {};
       registry[id].baseSections.forEach(s=> initHex[s.id]=s.hex);
       hexes[id] = initHex;
@@ -1040,6 +1107,7 @@
   // ---------- initial (blank) state ----------
   buildLayerListUI();
   buildLibraryUI();
+  updateDropZoneLabel();
   document.getElementById('librarySearch').addEventListener('input', e=>{
     buildLibraryUI(e.target.value);
   });
