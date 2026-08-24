@@ -741,7 +741,9 @@
     octx.imageSmoothingEnabled = false;
     octx.drawImage(img, 0, 0);
     const imageData = octx.getImageData(0,0,w,h);
-    const { clusterIdByPixel, sections } = detectClusters(imageData);
+    // The dragon is never recolored, so skip the (relatively costly) color-cluster
+    // scan for it entirely and just import its pixels as-is.
+    const { clusterIdByPixel, sections } = isBase ? { clusterIdByPixel: null, sections: [] } : detectClusters(imageData);
 
     const id = 'L' + (nextId++);
     registry[id] = { name, w, h, imageData, clusterIdByPixel, baseSections: sections, isBase };
@@ -1065,6 +1067,11 @@
     const out = document.createElement('canvas');
     out.width = reg.w; out.height = reg.h;
     const octx = out.getContext('2d');
+    if(reg.isBase){
+      // No color sections were ever scanned for the dragon — draw its pixels as-is.
+      octx.putImageData(reg.imageData, 0, 0);
+      return out;
+    }
     const imgData = octx.createImageData(reg.w, reg.h);
     const src = reg.imageData.data;
     const dst = imgData.data;
