@@ -91,8 +91,41 @@
   }
   .drop:hover, .drop.drag{ border-color:var(--pink); background:rgba(255,111,174,0.06); }
   .drop input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .drop.has-image{
+    display:flex; align-items:center; gap:10px; text-align:left; padding:9px;
+    border-style:solid; border-color:var(--teal); background:rgba(79,224,200,0.05);
+  }
+  .drop.has-image:hover{ border-color:var(--pink); background:rgba(255,111,174,0.06); }
+  .dragon-thumb-wrap{
+    width:44px; height:44px; border-radius:7px; overflow:hidden; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 1px var(--line);
+    background:
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 0 0/10px 10px,
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 5px 5px/10px 10px,
+      #16111e;
+  }
+  .dragon-thumb-wrap img{ max-width:100%; max-height:100%; image-rendering:pixelated; }
+  .dragon-info{ flex:1; min-width:0; }
+  .dragon-info .dragon-label{
+    font-size:9px; color:var(--teal); letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .dragon-info .dragon-name{
+    font-size:11.5px; color:var(--ink); margin-top:2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dragon-remove{
+    position:relative; z-index:2; flex:none;
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    width:24px; height:24px; border-radius:6px; cursor:pointer; font-size:11px;
+  }
+  .dragon-remove:hover{ border-color:#ff6f6f; color:#ff6f6f; }
+  .items-label{
+    font-size:10.5px; color:var(--ink-dim); letter-spacing:0.5px;
+    margin:16px 0 4px; padding-top:12px; border-top:1px dashed var(--line);
+  }
+  .items-label span{ font-weight:normal; text-transform:none; margin-left:6px; color:#7a6f95; }
 
-  .field-row{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
   label.small{ font-size:10.5px; color:var(--ink-dim); }
   input[type=range]{ accent-color:var(--pink); }
 
@@ -118,9 +151,6 @@
 
   .layer-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color .12s; }
   .layer-card.selected{ border-color:var(--pink); box-shadow: 0 0 0 1px var(--pink); }
-  .layer-card.is-base{ border-color:var(--teal); }
-  .layer-card.is-base.selected{ border-color:var(--pink); }
-  .layer-card.is-base .layer-head{ background:rgba(79,224,200,0.07); }
   .lib-locked{ font-size:11px; color:var(--ink-dim); line-height:1.6; padding:14px 4px; text-align:center; }
   .layer-head{ display:flex; align-items:center; gap:6px; padding:8px 8px; }
   .icon-btn{
@@ -326,15 +356,17 @@
     <div class="panel">
       <h2>YOUR DRAGON <small>drop one image, then add items from the library below</small></h2>
       <div class="drop" id="dropLayer">
-        <span>+ Add your dragon (drop PNG or click)</span>
+        <div class="dragon-thumb-wrap" id="dragonThumbWrap" style="display:none;"><img id="dragonThumb" alt=""></div>
+        <div class="dragon-info" id="dragonInfo" style="display:none;">
+          <div class="dragon-label">🐉 base image</div>
+          <div class="dragon-name" id="dragonName"></div>
+        </div>
+        <span id="dragonDropText">+ Add your dragon (drop PNG or click)</span>
+        <button type="button" class="dragon-remove" id="dragonRemoveBtn" title="Remove dragon" style="display:none;">✕</button>
         <input type="file" id="layerInput" accept="image/png,image/*">
       </div>
 
-      <div class="field-row">
-        <label class="small">New-layer color match sensitivity: <span id="tolVal">28</span></label>
-        <input type="range" id="tolerance" min="4" max="80" value="28">
-      </div>
-
+      <div class="items-label">ITEMS <span>added from the library below, stacked bottom → top</span></div>
       <div class="layers" id="layers"></div>
     </div>
 
@@ -391,9 +423,6 @@
         <div class="empty-note">Opens a save-ready preview in this page — right-click the image → <b>Save image as…</b> to download it. The checkerboard is just a preview aid and is never part of the file.</div>
 
         <div class="btn-row" style="margin-top:16px;">
-          <button class="btn-ghost" id="randomBtn">🎲 Randomize all</button>
-        </div>
-        <div class="btn-row">
           <button class="btn-ghost" id="resetBtn">↺ Reset all colors</button>
         </div>
       </div>
@@ -437,8 +466,12 @@
   const emptyHint = document.getElementById('emptyHint');
   const zoomSlider = document.getElementById('zoom');
   const zoomVal = document.getElementById('zoomVal');
-  const tolSlider = document.getElementById('tolerance');
-  const tolVal = document.getElementById('tolVal');
+  const dragonThumbWrap = document.getElementById('dragonThumbWrap');
+  const dragonThumb = document.getElementById('dragonThumb');
+  const dragonInfo = document.getElementById('dragonInfo');
+  const dragonName = document.getElementById('dragonName');
+  const dragonDropText = document.getElementById('dragonDropText');
+  const dragonRemoveBtn = document.getElementById('dragonRemoveBtn');
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
   const exportBtn = document.getElementById('exportBtn');
@@ -520,7 +553,13 @@
   }
   function dist2(a,r,g,b){ const dr=a[0]-r, dg=a[1]-g, db=a[2]-b; return dr*dr+dg*dg+db*db; }
 
-  function detectClusters(imageData, tol){
+  // Flat-color pixel art only has a handful of distinct colors, so sections are
+  // detected automatically: colors are matched near-exactly (a tiny tolerance
+  // just absorbs stray compression noise) and up to MAX_SECTIONS are kept.
+  const AUTO_TOL = 2;
+  const MAX_SECTIONS = 64;
+
+  function detectClusters(imageData){
     const data = imageData.data;
     const n = imageData.width * imageData.height;
     const freq = new Map();
@@ -531,7 +570,7 @@
       freq.set(key, (freq.get(key)||0)+1);
     }
     const sorted = [...freq.entries()].sort((a,b)=>b[1]-a[1]);
-    const tol2 = tol*tol;
+    const tol2 = AUTO_TOL*AUTO_TOL;
     const clusters = [];
     for(const [key,count] of sorted){
       const [r,g,b] = key.split(',').map(Number);
@@ -541,11 +580,11 @@
       }
       if(!matched){
         clusters.push({color:[r,g,b], count});
-        if(clusters.length >= 24) break;
+        if(clusters.length >= MAX_SECTIONS) break;
       }
     }
     const total = sorted.reduce((s,e)=>s+e[1],0) || 1;
-    let filtered = clusters.filter(c => c.count/total > 0.0015);
+    let filtered = clusters.filter(c => c.count/total > 0.0005);
     if(filtered.length === 0) filtered = clusters.slice(0,1);
 
     const clusterIdByPixel = new Int16Array(n).fill(-1);
@@ -654,7 +693,6 @@
     outCanvas.style.height = (H*z)+'px';
   }
   zoomSlider.addEventListener('input', applyZoom);
-  tolSlider.addEventListener('input', ()=>{ tolVal.textContent = tolSlider.value; });
 
   // ---------- add / remove / reorder layers ----------
   function wireDrop(dropEl, inputEl, onFile){
@@ -679,8 +717,7 @@
     octx.imageSmoothingEnabled = false;
     octx.drawImage(img, 0, 0);
     const imageData = octx.getImageData(0,0,w,h);
-    const tol = parseInt(tolSlider.value,10);
-    const { clusterIdByPixel, sections } = detectClusters(imageData, tol);
+    const { clusterIdByPixel, sections } = detectClusters(imageData);
 
     const id = 'L' + (nextId++);
     registry[id] = { name, w, h, imageData, clusterIdByPixel, baseSections: sections, isBase };
@@ -724,12 +761,27 @@
 
   wireDrop(dropLayer, layerInput, file => addLayerFromFile(file, null, {isBase:true}));
 
+  dragonRemoveBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    if(baseLayerId) removeLayer(baseLayerId);
+  });
+
   function updateDropZoneLabel(){
-    const span = dropLayer.querySelector('span');
-    if(baseLayerId && registry[baseLayerId]){
-      span.textContent = '🐉 ' + registry[baseLayerId].name + ' — drop or click to replace';
+    const reg = baseLayerId && registry[baseLayerId];
+    dropLayer.classList.toggle('has-image', !!reg);
+    if(reg){
+      dragonThumb.src = renderLayerCanvas(reg, hexes[baseLayerId]).toDataURL();
+      dragonName.textContent = reg.name;
+      dragonThumbWrap.style.display = '';
+      dragonInfo.style.display = '';
+      dragonRemoveBtn.style.display = '';
+      dragonDropText.style.display = 'none';
     } else {
-      span.textContent = '+ Add your dragon (drop PNG or click)';
+      dragonThumbWrap.style.display = 'none';
+      dragonInfo.style.display = 'none';
+      dragonRemoveBtn.style.display = 'none';
+      dragonDropText.style.display = '';
+      dragonDropText.textContent = '+ Add your dragon (drop PNG or click)';
     }
   }
 
@@ -769,19 +821,6 @@
   function renameLayer(id, newName){
     pushHistory();
     registry[id].name = newName;
-  }
-  function rescanLayer(id){
-    const reg = registry[id];
-    const tol = parseInt(tolSlider.value,10);
-    const { clusterIdByPixel, sections } = detectClusters(reg.imageData, tol);
-    pushHistory();
-    reg.clusterIdByPixel = clusterIdByPixel;
-    reg.baseSections = sections;
-    const initHex = {};
-    sections.forEach(s => initHex[s.id] = s.hex);
-    hexes[id] = initHex;
-    buildLayerListUI();
-    renderAll();
   }
   function resetLayerColors(id){
     pushHistory();
@@ -831,38 +870,31 @@
   // ---------- layer list UI ----------
   function buildLayerListUI(){
     layersEl.innerHTML = '';
-    if(order.length === 0){
-      layersEl.innerHTML = '<div class="empty-note">No dragon yet — drop or click above to add one.</div>';
+    // The dragon (base layer) is always at the back and never recolorable, so
+    // it doesn't get a card here — only the items stacked on top of it do.
+    const display = order.filter(id => id !== baseLayerId).slice().reverse(); // front-most first
+    if(display.length === 0){
+      layersEl.innerHTML = baseLayerId
+        ? '<div class="empty-note">No items yet — add one from the library below.</div>'
+        : '<div class="empty-note">Add your dragon above, then add items from the library below.</div>';
       updateRepoUI();
       return;
     }
-    const display = order.slice().reverse(); // front-most first
     display.forEach(id=>{
       const reg = registry[id];
       if(!reg) return;
       const idx = order.indexOf(id);
       const isTop = idx === order.length - 1;
-      const isBottom = idx === 0;
+      const isBottom = idx === 0 || order[idx-1] === baseLayerId;
       const isExpanded = expanded.has(id);
 
-      const isBaseLayer = !!reg.isBase;
-
       const card = document.createElement('div');
-      card.className = 'layer-card' + (id === selectedId ? ' selected' : '') + (isBaseLayer ? ' is-base' : '');
+      card.className = 'layer-card' + (id === selectedId ? ' selected' : '');
       card.addEventListener('click', ()=> selectLayer(id));
 
       const head = document.createElement('div');
       head.className = 'layer-head';
-      head.innerHTML = isBaseLayer ? `
-        <div class="order-btns">
-          <button class="icon-btn" data-act="up" disabled title="The dragon always stays at the back">▲</button>
-          <button class="icon-btn" data-act="down" disabled title="The dragon always stays at the back">▼</button>
-        </div>
-        <input type="checkbox" class="vis-toggle" ${visible[id] ? 'checked' : ''} title="Show/hide dragon">
-        <input type="text" class="layer-name" value="${reg.name.replace(/"/g,'&quot;')}">
-        <span class="icon-btn" title="This is your dragon — its colors are locked" style="cursor:default;">🔒</span>
-        <button class="icon-btn danger" data-act="remove" title="Remove dragon layer">✕</button>
-      ` : `
+      head.innerHTML = `
         <div class="order-btns">
           <button class="icon-btn" data-act="up" ${isTop?'disabled':''} title="Bring forward">▲</button>
           <button class="icon-btn" data-act="down" ${isBottom?'disabled':''} title="Send backward">▼</button>
@@ -874,47 +906,40 @@
       `;
       card.appendChild(head);
 
-      let body = null;
-      if(!isBaseLayer){
-        body = document.createElement('div');
-        body.className = 'layer-body' + (isExpanded ? '' : ' collapsed');
-        const secWrap = document.createElement('div');
-        reg.baseSections.forEach(s=>{
-          const hex = hexes[id][s.id] || s.hex;
-          const row = document.createElement('div');
-          row.className = 'sec-row';
-          row.innerHTML = `
-            <div class="swatch-wrap"><input type="color" value="${hex}" data-sec="${s.id}"></div>
-            <div class="sec-meta">
-              <div class="sec-name">Section ${s.id+1}</div>
-              <input class="sec-hex" data-sec="${s.id}" value="${hex}">
-            </div>
-          `;
-          secWrap.appendChild(row);
-        });
-        body.appendChild(secWrap);
+      const body = document.createElement('div');
+      body.className = 'layer-body' + (isExpanded ? '' : ' collapsed');
+      const secWrap = document.createElement('div');
+      reg.baseSections.forEach(s=>{
+        const hex = hexes[id][s.id] || s.hex;
+        const row = document.createElement('div');
+        row.className = 'sec-row';
+        row.innerHTML = `
+          <div class="swatch-wrap"><input type="color" value="${hex}" data-sec="${s.id}"></div>
+          <div class="sec-meta">
+            <div class="sec-name">Section ${s.id+1}</div>
+            <input class="sec-hex" data-sec="${s.id}" value="${hex}">
+          </div>
+        `;
+        secWrap.appendChild(row);
+      });
+      body.appendChild(secWrap);
 
-        const foot = document.createElement('div');
-        foot.className = 'layer-foot';
-        foot.innerHTML = `<button data-act="rescan">Re-scan sections</button><button data-act="resetcolors">Reset colors</button>`;
-        body.appendChild(foot);
+      const foot = document.createElement('div');
+      foot.className = 'layer-foot';
+      foot.innerHTML = `<button data-act="resetcolors">Reset colors</button>`;
+      body.appendChild(foot);
 
-        card.appendChild(body);
-      }
+      card.appendChild(body);
       layersEl.appendChild(card);
 
       // wire head controls
-      if(!isBaseLayer){
-        head.querySelector('[data-act="up"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'up'); });
-        head.querySelector('[data-act="down"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'down'); });
-      }
+      head.querySelector('[data-act="up"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'up'); });
+      head.querySelector('[data-act="down"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'down'); });
       head.querySelector('.vis-toggle').addEventListener('click', e=> e.stopPropagation());
       head.querySelector('.vis-toggle').addEventListener('change', ()=> toggleVisible(id));
       head.querySelector('[data-act="remove"]').addEventListener('click', e=>{ e.stopPropagation(); removeLayer(id); });
       const nameInput = head.querySelector('.layer-name');
       nameInput.addEventListener('change', ()=> renameLayer(id, nameInput.value.trim() || reg.name));
-
-      if(isBaseLayer) return;
 
       head.querySelector('[data-act="expand"]').addEventListener('click', e=>{
         e.stopPropagation();
@@ -947,7 +972,6 @@
           renderAll();
         });
       });
-      body.querySelector('[data-act="rescan"]').addEventListener('click', ()=> rescanLayer(id));
       body.querySelector('[data-act="resetcolors"]').addEventListener('click', ()=> resetLayerColors(id));
     });
     updateRepoUI();
@@ -1068,19 +1092,6 @@
   });
 
   // ---------- global actions ----------
-  document.getElementById('randomBtn').addEventListener('click', ()=>{
-    if(order.length === 0) return;
-    pushHistory();
-    order.forEach(id=>{
-      if(id === baseLayerId) return; // the dragon's colors are locked
-      registry[id].baseSections.forEach(s=>{
-        const r = Math.floor(Math.random()*200+30), g = Math.floor(Math.random()*200+30), b = Math.floor(Math.random()*200+30);
-        hexes[id][s.id] = rgbToHex(r,g,b);
-      });
-    });
-    buildLayerListUI();
-    renderAll();
-  });
   document.getElementById('resetBtn').addEventListener('click', ()=>{
     if(order.length === 0) return;
     pushHistory();
