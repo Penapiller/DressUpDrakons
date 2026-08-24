@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dragon Creator - By Penapiller </title>
+<link rel="icon" type="image/x-icon" href="https://i.ibb.co/3Y8ngCb9/IMG-3681.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
+
+  :root{
+    --bg: #14111c;
+    --panel: #1d1826;
+    --panel-2: #251f32;
+    --panel-3: #2c2438;
+    --line: #362d47;
+    --ink: #f1ece2;
+    --ink-dim: #a99fc0;
+    --pink: #ff6fae;
+    --teal: #4fe0c8;
+    --yellow: #ffd15c;
+    --radius: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ background: var(--bg); }
+  html,body{ min-height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, #2a1f3a 0%, transparent 45%),
+      radial-gradient(circle at 85% 100%, #1c2f38 0%, transparent 45%),
+      var(--bg);
+    background-attachment: fixed;
+    color:var(--ink);
+    font-family:'Space Mono', ui-monospace, monospace;
+  }
+
+  .wrap{ max-width:1240px; margin:0 auto; padding:24px 20px 60px; }
+
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:16px; flex-wrap:wrap; margin-bottom:14px;
+    border-bottom:2px dashed var(--line); padding-bottom:16px;
+  }
+  header h1{
+    font-family:'Press Start 2P', monospace; font-size:16px; line-height:1.6; margin:0;
+    color:var(--pink); letter-spacing:0.5px; text-shadow: 2px 2px 0 #3a1230;
+  }
+  header p{ margin:6px 0 0; color:var(--ink-dim); font-size:12.5px; max-width:540px; }
+
+  .toolbar{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .toolbar button{
+    font-family:'Space Mono', monospace; font-size:11px; font-weight:700;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
+    padding:8px 12px; border-radius:7px; cursor:pointer;
+  }
+  .toolbar button:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+  .toolbar button:disabled{ opacity:0.35; cursor:default; }
+  .toolbar .hint{ font-size:10.5px; color:var(--ink-dim); }
+  kbd{
+    font-family:'Space Mono',monospace; font-size:9.5px; background:#0f0c16;
+    border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--yellow);
+  }
+
+  .layout{ display:grid; grid-template-columns: 320px 1fr 270px; gap:18px; align-items:start; }
+  @media (max-width: 980px){
+    .layout{ grid-template-columns: 1fr; }
+    .stage-panel, .side-panel{ position:static !important; }
+  }
+  .stage-panel, .side-panel{ position:sticky; top:20px; }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
+  .panel + .panel{ margin-top:16px; }
+  .panel h2{
+    font-family:'Press Start 2P', monospace; font-size:10.5px; color:var(--yellow);
+    margin:0 0 12px; letter-spacing:0.5px;
+  }
+  .panel h2 small{
+    display:block; font-family:'Space Mono', monospace; color:var(--ink-dim);
+    font-size:10px; margin-top:6px; letter-spacing:normal;
+  }
+
+  .drop{
+    border:2px dashed var(--line); border-radius:8px; padding:14px 10px;
+    text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:pointer;
+    transition: border-color .15s, background .15s; position:relative;
+  }
+  .drop:hover, .drop.drag{ border-color:var(--pink); background:rgba(255,111,174,0.06); }
+  .drop input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+  .field-row{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  label.small{ font-size:10.5px; color:var(--ink-dim); }
+  input[type=range]{ accent-color:var(--pink); }
+
+  button.btn-primary{
+    font-family:'Space Mono', monospace; font-weight:700; font-size:11.5px; border:none;
+    border-radius:7px; padding:10px 12px; cursor:pointer; width:100%;
+    background:var(--pink); color:#2c0d1f;
+  }
+  button.btn-primary:hover{ filter:brightness(1.08); }
+  button.btn-ghost{
+    font-family:'Space Mono', monospace; font-weight:700; font-size:11px; cursor:pointer;
+    background:transparent; border:1px solid var(--line); color:var(--ink);
+    border-radius:7px; padding:9px 10px; width:100%;
+  }
+  button.btn-ghost:hover{ border-color:var(--teal); color:var(--teal); }
+  .btn-row{ display:flex; gap:8px; margin-top:10px; }
+  .btn-row button{ flex:1; }
+
+  /* Layer list */
+  .layers{ display:flex; flex-direction:column; gap:10px; max-height:600px; overflow-y:auto; padding-right:2px; margin-top:12px; }
+  .layers::-webkit-scrollbar{ width:6px; }
+  .layers::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+
+  .layer-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color .12s; }
+  .layer-card.selected{ border-color:var(--pink); box-shadow: 0 0 0 1px var(--pink); }
+  .layer-head{ display:flex; align-items:center; gap:6px; padding:8px 8px; }
+  .icon-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    width:24px; height:24px; border-radius:6px; cursor:pointer; font-size:11px;
+    display:flex; align-items:center; justify-content:center; flex:none; padding:0;
+  }
+  .icon-btn:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+  .icon-btn:disabled{ opacity:0.3; cursor:default; }
+  .icon-btn.danger:hover{ border-color:#ff6f6f; color:#ff6f6f; }
+
+  .arrow-pad{
+    display:grid;
+    grid-template-columns: repeat(3, 38px);
+    grid-template-rows: repeat(3, 38px);
+    gap:6px;
+    justify-content:center;
+    margin: 12px auto 6px;
+  }
+  .arrow-btn{
+    width:38px; height:38px; font-size:15px; border-radius:8px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--ink);
+  }
+  .arrow-btn:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+  .arrow-pad .pivot{
+    width:38px; height:38px; border-radius:8px; background:var(--panel-3);
+    border:1px dashed var(--line); display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); font-size:12px;
+  }
+  .repo-name{
+    font-size:11px; color:var(--ink); text-align:center; margin-top:4px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .repo-offset{ font-size:10.5px; color:var(--ink-dim); text-align:center; margin-top:4px; }
+  .vis-toggle{ accent-color: var(--teal); width:16px; height:16px; flex:none; cursor:pointer; }
+  .layer-name{
+    flex:1; min-width:0; background:none; border:none; color:var(--ink);
+    font-family:'Space Mono',monospace; font-size:11.5px; padding:2px 4px; border-radius:4px;
+  }
+  .layer-name:focus{ outline:1px solid var(--teal); background:#1a1522; }
+  .order-btns{ display:flex; flex-direction:column; gap:2px; }
+  .order-btns .icon-btn{ width:18px; height:14px; font-size:8px; }
+
+  .layer-body{ padding:4px 10px 10px; border-top:1px dashed var(--line); }
+  .layer-body.collapsed{ display:none; }
+  .sec-row{ display:flex; align-items:center; gap:9px; padding:5px 0; }
+  .swatch-wrap{ position:relative; width:28px; height:28px; flex:none; }
+  .swatch-wrap input[type=color]{
+    -webkit-appearance:none; appearance:none; width:100%; height:100%;
+    border:2px solid #000; border-radius:6px; padding:0; background:none; cursor:pointer;
+  }
+  .swatch-wrap input[type=color]::-webkit-color-swatch-wrapper{ padding:0; }
+  .swatch-wrap input[type=color]::-webkit-color-swatch{ border:none; border-radius:4px; }
+  .sec-meta{ flex:1; min-width:0; }
+  .sec-name{ font-size:10.5px; color:var(--ink-dim); }
+  .sec-hex{
+    font-size:10px; color:var(--ink); background:none; border:none;
+    padding:0; width:66px; font-family:'Space Mono',monospace;
+  }
+  .sec-hex:focus{ outline:1px solid var(--teal); border-radius:3px; }
+  .layer-foot{ display:flex; gap:6px; margin-top:6px; }
+  .layer-foot button{
+    flex:1; font-size:9.5px; font-family:'Space Mono',monospace; background:var(--panel-3);
+    border:1px solid var(--line); color:var(--ink-dim); border-radius:6px; padding:5px 4px; cursor:pointer;
+  }
+  .layer-foot button:hover{ color:var(--teal); border-color:var(--teal); }
+  .empty-note{ font-size:11px; color:var(--ink-dim); line-height:1.6; margin-top:10px; }
+
+  /* Stage */
+  .stage{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:420px; gap:14px; }
+  .canvas-holder{
+    position:relative; border-radius:10px; overflow:hidden;
+    box-shadow: 0 0 0 1px var(--line), 0 18px 40px -12px rgba(0,0,0,0.55);
+  }
+  .checker-bg{
+    background:
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 0 0/20px 20px,
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 10px 10px/20px 20px,
+      #16111e;
+  }
+  #outCanvas{ display:block; image-rendering:pixelated; image-rendering:crisp-edges; }
+  .canvas-holder{ min-width:260px; min-height:180px; display:flex; align-items:center; justify-content:center; }
+  .empty-hint{ font-size:11.5px; color:var(--ink-dim); text-align:center; line-height:1.8; padding:20px; }
+  .empty-hint small{ color:#7a6f95; font-size:10px; }
+
+  .bg-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .bg-row span.lbl{ font-size:10.5px; color:var(--ink-dim); margin-right:2px; }
+  .bg-swatch{
+    width:22px; height:22px; border-radius:5px; border:2px solid var(--line); cursor:pointer; padding:0;
+  }
+  .bg-swatch.active{ border-color:var(--pink); }
+  .bg-swatch.checker-swatch{
+    background:
+      linear-gradient(45deg,#3a3450 25%,transparent 25%,transparent 75%,#3a3450 75%) 0 0/8px 8px,
+      linear-gradient(45deg,#3a3450 25%,transparent 25%,transparent 75%,#3a3450 75%) 4px 4px/8px 8px,
+      #1a1522;
+  }
+  .bg-row input[type=color]{
+    width:26px; height:26px; border-radius:6px; border:2px solid var(--line); padding:0; cursor:pointer; background:none;
+  }
+
+  .zoom-row{ display:flex; align-items:center; gap:10px; color:var(--ink-dim); font-size:11px; }
+  .zoom-row input[type=range]{ width:150px; }
+
+  .footer-note{
+    margin-top:22px; font-size:11px; color:var(--ink-dim); line-height:1.8;
+    border-top:1px dashed var(--line); padding-top:16px;
+  }
+  .footer-note b{ color:var(--teal); }
+  .footer-note code{ background:#0f0c16; padding:1px 5px; border-radius:4px; color:var(--yellow); }
+
+  /* Premade image library */
+  .library-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap:12px;
+    margin-top:4px;
+  }
+  .lib-search{
+    width:100%; box-sizing:border-box; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--ink); padding:8px 10px; border-radius:7px; font-family:'Space Mono',monospace;
+    font-size:11.5px; margin-bottom:12px;
+  }
+  .lib-search::placeholder{ color:var(--ink-dim); }
+  .lib-search:focus{ outline:none; border-color:var(--teal); }
+  .lib-item{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    cursor:pointer; overflow:hidden; text-align:center; padding-bottom:7px;
+    transition:border-color .12s;
+  }
+  .lib-item:hover{ border-color:var(--pink); }
+  .lib-item.empty{ cursor:default; }
+  .lib-item.empty:hover{ border-color:var(--line); }
+  .lib-thumb{
+    width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    background:
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 0 0/16px 16px,
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 8px 8px/16px 16px,
+      #16111e;
+  }
+  .lib-thumb img{ max-width:78%; max-height:78%; image-rendering:pixelated; }
+  .lib-thumb .lib-placeholder{ font-size:9.5px; color:var(--ink-dim); padding:6px; }
+  .lib-name{
+    font-size:10px; color:var(--ink-dim); margin-top:6px; padding:0 6px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  details.lib-details{ margin-top:16px; }
+  details.lib-details summary{
+    cursor:pointer; font-size:10.5px; color:var(--ink-dim); user-select:none;
+  }
+  details.lib-details summary:hover{ color:var(--teal); }
+
+  /* Export modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,6,12,0.86); z-index:50;
+    display:none; align-items:center; justify-content:center; padding:30px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:16px; max-width:90vw; max-height:90vh; display:flex; flex-direction:column; gap:12px;
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    font-size:12px; color:var(--yellow); font-family:'Space Mono',monospace;
+  }
+  .modal-head button{
+    background:none; border:1px solid var(--line); color:var(--ink); border-radius:6px;
+    width:28px; height:28px; cursor:pointer; font-size:13px;
+  }
+  .modal-img-wrap{
+    flex:1; overflow:auto; display:flex; align-items:center; justify-content:center;
+    border-radius:8px;
+    background:
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 0 0/20px 20px,
+      linear-gradient(45deg,#2a2436 25%,transparent 25%,transparent 75%,#2a2436 75%) 10px 10px/20px 20px,
+      #16111e;
+    padding:20px;
+  }
+  .modal-img-wrap img{ image-rendering:pixelated; max-width:70vw; max-height:65vh; }
+  .modal-sub{ font-size:10.5px; color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Dragon Creator - By Penapiller </h1>
+      <p>This tool is for staff to create dragons for an online UMA! Please do not use this tool without permission.</p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="undoBtn" disabled>↶ Undo</button>
+    <button id="redoBtn" disabled>↷ Redo</button>
+    <span class="hint"><kbd>Ctrl/Cmd</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> redo</span>
+  </div>
+
+  <div class="layout">
+
+    <!-- LEFT: layers -->
+    <div class="panel">
+      <h2>LAYERS <small>stacked bottom → top</small></h2>
+      <div class="drop" id="dropLayer">
+        <span>+ Add layer (drop PNG or click)</span>
+        <input type="file" id="layerInput" accept="image/png,image/*">
+      </div>
+
+      <div class="field-row">
+        <label class="small">New-layer color match sensitivity: <span id="tolVal">28</span></label>
+        <input type="range" id="tolerance" min="4" max="80" value="28">
+      </div>
+
+      <div class="layers" id="layers"></div>
+    </div>
+
+    <!-- CENTER: canvas -->
+    <div class="panel stage-panel">
+      <div class="stage">
+        <div class="canvas-holder checker-bg" id="canvasHolder">
+          <canvas id="outCanvas" width="10" height="10" style="display:none;"></canvas>
+          <div class="empty-hint" id="emptyHint">No layers yet<br><small>Add a PNG — the canvas will exactly match its pixel dimensions.</small></div>
+        </div>
+        <div class="bg-row">
+          <span class="lbl">Preview background:</span>
+          <button class="bg-swatch checker-swatch active" data-bg="checker" title="Transparent"></button>
+          <button class="bg-swatch" data-bg="#ffffff" style="background:#ffffff" title="White"></button>
+          <button class="bg-swatch" data-bg="#1a1a1a" style="background:#1a1a1a" title="Black"></button>
+          <button class="bg-swatch" data-bg="#6b7280" style="background:#6b7280" title="Gray"></button>
+          <button class="bg-swatch" data-bg="#3a6b4f" style="background:#3a6b4f" title="Grass"></button>
+          <button class="bg-swatch" data-bg="#8fd0ff" style="background:#8fd0ff" title="Sky"></button>
+          <input type="color" id="customBg" value="#ff6fae" title="Custom color">
+        </div>
+        <div class="zoom-row">
+          <span>Zoom</span>
+          <input type="range" id="zoom" min="1" max="24" value="10">
+          <span id="zoomVal">10x</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: actions -->
+    <div class="side-panel">
+      <div class="panel">
+        <h2>REPOSITION <small id="repoSelName">no layer selected</small></h2>
+        <div class="arrow-pad">
+          <div></div>
+          <button class="icon-btn arrow-btn" id="nudgeUp" disabled title="Nudge up">▲</button>
+          <div></div>
+          <button class="icon-btn arrow-btn" id="nudgeLeft" disabled title="Nudge left">◀</button>
+          <div class="pivot">✛</div>
+          <button class="icon-btn arrow-btn" id="nudgeRight" disabled title="Nudge right">▶</button>
+          <div></div>
+          <button class="icon-btn arrow-btn" id="nudgeDown" disabled title="Nudge down">▼</button>
+          <div></div>
+        </div>
+        <div class="repo-offset" id="repoOffset">x: 0, y: 0</div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn-ghost" id="repoResetBtn" disabled>↺ Reset position</button>
+        </div>
+        <div class="empty-note">Click a layer on the left to select it, then use the pad or your keyboard's arrow keys to nudge it one pixel at a time.</div>
+      </div>
+
+      <div class="panel">
+        <h2>EXPORT</h2>
+        <button class="btn-primary" id="exportBtn">Export PNG</button>
+        <div class="empty-note">Opens a save-ready preview in this page — right-click the image → <b>Save image as…</b> to download it. The checkerboard is just a preview aid and is never part of the file.</div>
+
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn-ghost" id="randomBtn">🎲 Randomize all</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-ghost" id="resetBtn">↺ Reset all colors</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel" id="libraryPanel" style="margin-top:16px;">
+    <h2>IMAGE LIBRARY <small>click a thumbnail to add it as a new layer</small></h2>
+    <input type="text" id="librarySearch" placeholder="Search library by name…" class="lib-search">
+    <div class="library-grid" id="libraryGrid"></div>
+
+    <details class="lib-details">
+      <summary>Prepping layer images (click to expand)</summary>
+      <div class="footer-note" style="border-top:none; padding-top:8px; margin-top:2px;">
+        <b>Prepping layers:</b> each layer is a PNG with a transparent background. It's loaded at its <b>exact original pixel dimensions</b> — nothing is resized, resampled, or compressed. Paint every colorable region on a layer as one flat solid color (no anti-aliasing) — the tool groups matching colors into sections you can repaint. A layer can be a base coat, a line-art layer (its "sections" will just be your outline colors — recolor those too if you like), a pattern, or an item like a bow or saddle. Order them in the list with the ↑ / ↓ arrows; the top of the list draws in front. The canvas auto-sizes to the largest layer you've added, and every layer is anchored to its top-left corner — so for pieces to line up (a hat sitting on a head, for example), export all your layers from the same canvas size in your art program even if individual pieces only use part of it.
+      </div>
+    </details>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span>Right-click the image → “Save image as…”</span>
+      <button id="closeModal">✕</button>
+    </div>
+    <div class="modal-img-wrap"><img id="exportImg" alt="Exported character"></div>
+    <div class="modal-sub">Background here is just checkerboard for visibility — the PNG itself is transparent.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const layerInput = document.getElementById('layerInput');
+  const dropLayer = document.getElementById('dropLayer');
+  const layersEl = document.getElementById('layers');
+  const outCanvas = document.getElementById('outCanvas');
+  const ctx = outCanvas.getContext('2d');
+  const canvasHolder = document.getElementById('canvasHolder');
+  const emptyHint = document.getElementById('emptyHint');
+  const zoomSlider = document.getElementById('zoom');
+  const zoomVal = document.getElementById('zoomVal');
+  const tolSlider = document.getElementById('tolerance');
+  const tolVal = document.getElementById('tolVal');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const exportModal = document.getElementById('exportModal');
+  const exportImg = document.getElementById('exportImg');
+  const closeModal = document.getElementById('closeModal');
+  const repoSelName = document.getElementById('repoSelName');
+  const repoOffset = document.getElementById('repoOffset');
+  const repoResetBtn = document.getElementById('repoResetBtn');
+  const nudgeUp = document.getElementById('nudgeUp');
+  const nudgeDown = document.getElementById('nudgeDown');
+  const nudgeLeft = document.getElementById('nudgeLeft');
+  const nudgeRight = document.getElementById('nudgeRight');
+
+  // ============================================================
+  //  PREMADE IMAGE LIBRARY
+  //  Add your own PNGs here as base64 "data URIs" so the whole
+  //  file stays a single, shareable HTML page (no separate image
+  //  files to keep track of).
+  //
+  //  HOW TO ADD A NEW IMAGE:
+  //  1. Get a base64 data URI for your PNG. Two easy ways:
+  //       a) Use a free converter site like base64-image.de or
+  //          base64.guru/converter/encode/image — upload the PNG,
+  //          copy the FULL string it gives you (it will start with
+  //          "data:image/png;base64,").
+  //       b) From a terminal: run
+  //            base64 -i your-image.png
+  //          then paste the output after "data:image/png;base64,"
+  //          (on Windows, certutil -encode your-image.png out.txt
+  //          works similarly — just strip the header/footer lines).
+  //  2. Duplicate the block below (between the { and the },) and
+  //     paste it as a new entry in the PREMADE_LIBRARY array.
+  //  3. Set "name" to whatever label you want shown under the
+  //     thumbnail, and set "src" to your pasted data URI.
+  //  4. Save the file and reload it in your browser — your new
+  //     thumbnail will appear in the IMAGE LIBRARY panel, and
+  //     clicking it adds it as a new layer, same as drag-and-drop.
+  //
+  //  ===== DUPLICATE THIS BLOCK FOR EACH NEW IMAGE ↓ =====
+  //  {
+  //    name: 'My Image Name',
+  //    src: 'data:image/png;base64,PASTE_YOUR_BASE64_STRING_HERE'
+  //  },
+  //  ===== paste your new entries below, above the closing ] =====
+  const PREMADE_LIBRARY = [
+    {
+  name: 'Shadow',
+  src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAXNSR0IArs4c6QAAAKJlWElmTU0AKgAAAAgABgEGAAMAAAABAAIAAAENAAIAAAARAAAAVgEaAAUAAAABAAAAaAEbAAUAAAABAAAAcAEoAAMAAAABAAIAAIdpAAQAAAABAAAAeAAAAABVbnRpdGxlZCBBcnR3b3JrAAAAAAH0AAAAAQAAAfQAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAGSgAwAEAAAAAQAAAGQAAAAA4p/LzQAAAAlwSFlzAABM5QAATOUBdc7wlQAAA+9pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgICAgICAgICAgeG1sbnM6SXB0YzR4bXBFeHQ9Imh0dHA6Ly9pcHRjLm9yZy9zdGQvSXB0YzR4bXBFeHQvMjAwOC0wMi0yOS8iPgogICAgICAgICA8dGlmZjpEb2N1bWVudE5hbWU+VW50aXRsZWQgQXJ0d29yazwvdGlmZjpEb2N1bWVudE5hbWU+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjU8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOlhSZXNvbHV0aW9uPjUwMDwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPHRpZmY6UGhvdG9tZXRyaWNJbnRlcnByZXRhdGlvbj4yPC90aWZmOlBob3RvbWV0cmljSW50ZXJwcmV0YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjUwMDwvdGlmZjpZUmVzb2x1dGlvbj4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij5VbnRpdGxlZCBBcnR3b3JrPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgICAgPElwdGM0eG1wRXh0OkFydHdvcmtUaXRsZT5VbnRpdGxlZCBBcnR3b3JrPC9JcHRjNHhtcEV4dDpBcnR3b3JrVGl0bGU+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoQxHVIAAADR0lEQVR4Ae2aYXLcIAxG006PlPufoIdqNQkZDWNhLH0gwN/+iLG9IOk9MLPZ/fjgiwRIgARIgAR8BH75um3V67OR7d/GvZRbJwppCeiBnCrpFCFRCS1RUwWNFCKQRhczUoSWNLqOn1i/f1rYxgxQM2IIlWkyJNgf+QN+zQCFjjEVeov3CCGteIh7SBnLiChg0I8sJKySoz4ix19OhhSK3NRrWOiC6/G1qKdtdG5P45vvRzyykKCsRGfEsGJPvR5dIRYo5Ay0YnhBIXPz5mD2iwixQCELtmKYBTVuIPNqhInd8grRoKTQco4suowZq3Dy54hosh4hGhRSgK5Fx9DXn7ZH5fc0j+73Rzb1UcUiZIzKrRus943ezyHogouEcvTWI/3QuUVyedz3qRAEsDpJ5JhbyxAwnj2kBho598gQ6Ff9tpchICN7SESEt+8V9Ktr3vHT++0kpAZfn6fDRCSwyyPrSPhXAp9u6ldj8BqQAIUAYSKGohAEReAYFAKEiRgqW8hrNuteWdlCevN8zftWEMJVoqbbCkJUOmyuIoSr5HsuriKES4NC1pwDK60QPrb+z5GVhKw5ZSdnRSGTgd+FW0nI1beAd/kfd38lIRbcV+0tqwjh6viejtnfGEoaLRmvWh0CI1sIZYgF9coUYsl43apQPtJWCGVoC6q9ys+AXr0qlI/0prVS0hNjAiRAAiRAAiRAAiRAAiRAAiRAAiRAAiRAAiRAAiRAAiTgJ5D5jaEna+vf9cd8nxL51YkFxwP6ro/EmhnvLp9h9yNCJKlVIK2SR1hUVEiRcgyQMNHgABEh9XM7W0p2/KCKr+7RTd2CUMtCJGvFqsceEbuOMex8lBCdMBLQ8VIijywN3WojZUgM9HhW3mnXIyske7a24m8rbrcV0jNzt5UhxXmFtGZngTYSTE/8ksdWR6+QzCJbMkZOgik1e/aQFpCS9CgwrdijYpaaphzRP7ZGQ2kJ0IDQcfXYU9t3K6QXiCSNhtIbGx13qoA6WEtILxDKqKkGznfc1Eu5R62MUpS1QjJXR8ntlcfoCjlylr5yJrBoEiABEiABEiABEiABEiABEiABEiABEiABEiABEiABEiABEiABEiABEiCBmsA/V3BDdloQi9gAAAAASUVORK5CYII='
+},{
+  name: 'Eye Shadow',
+  src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAXNSR0IArs4c6QAAAKJlWElmTU0AKgAAAAgABgEGAAMAAAABAAIAAAENAAIAAAARAAAAVgEaAAUAAAABAAAAaAEbAAUAAAABAAAAcAEoAAMAAAABAAIAAIdpAAQAAAABAAAAeAAAAABVbnRpdGxlZCBBcnR3b3JrAAAAAAH0AAAAAQAAAfQAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAGSgAwAEAAAAAQAAAGQAAAAA4p/LzQAAAAlwSFlzAABM5QAATOUBdc7wlQAAA+9pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgICAgICAgICAgeG1sbnM6SXB0YzR4bXBFeHQ9Imh0dHA6Ly9pcHRjLm9yZy9zdGQvSXB0YzR4bXBFeHQvMjAwOC0wMi0yOS8iPgogICAgICAgICA8dGlmZjpEb2N1bWVudE5hbWU+VW50aXRsZWQgQXJ0d29yazwvdGlmZjpEb2N1bWVudE5hbWU+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjU8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOlhSZXNvbHV0aW9uPjUwMDwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPHRpZmY6UGhvdG9tZXRyaWNJbnRlcnByZXRhdGlvbj4yPC90aWZmOlBob3RvbWV0cmljSW50ZXJwcmV0YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjUwMDwvdGlmZjpZUmVzb2x1dGlvbj4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij5VbnRpdGxlZCBBcnR3b3JrPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgICAgPElwdGM0eG1wRXh0OkFydHdvcmtUaXRsZT5VbnRpdGxlZCBBcnR3b3JrPC9JcHRjNHhtcEV4dDpBcnR3b3JrVGl0bGU+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoQxHVIAAAA7ElEQVR4Ae3SwQnAIAwFUHGhupSu1Eu7lvOINx1AFHxCDsnlhxdD8AgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAIFZIJWvzhPdNoHxGE/+317blrk9GP76HxDXR0ggQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIEDhFoYS4Ja0Nt268AAAAASUVORK5CYII='
+},{
+  name: 'Striped Wings',
+  src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAAXNSR0IArs4c6QAAAKJlWElmTU0AKgAAAAgABgEGAAMAAAABAAIAAAENAAIAAAARAAAAVgEaAAUAAAABAAAAaAEbAAUAAAABAAAAcAEoAAMAAAABAAIAAIdpAAQAAAABAAAAeAAAAABVbnRpdGxlZCBBcnR3b3JrAAAAAAH0AAAAAQAAAfQAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAGSgAwAEAAAAAQAAAGQAAAAA4p/LzQAAAAlwSFlzAABM5QAATOUBdc7wlQAAA+9pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgICAgICAgICAgeG1sbnM6SXB0YzR4bXBFeHQ9Imh0dHA6Ly9pcHRjLm9yZy9zdGQvSXB0YzR4bXBFeHQvMjAwOC0wMi0yOS8iPgogICAgICAgICA8dGlmZjpEb2N1bWVudE5hbWU+VW50aXRsZWQgQXJ0d29yazwvdGlmZjpEb2N1bWVudE5hbWU+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOkNvbXByZXNzaW9uPjU8L3RpZmY6Q29tcHJlc3Npb24+CiAgICAgICAgIDx0aWZmOlhSZXNvbHV0aW9uPjUwMDwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPHRpZmY6UGhvdG9tZXRyaWNJbnRlcnByZXRhdGlvbj4yPC90aWZmOlBob3RvbWV0cmljSW50ZXJwcmV0YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjUwMDwvdGlmZjpZUmVzb2x1dGlvbj4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij5VbnRpdGxlZCBBcnR3b3JrPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgICAgPElwdGM0eG1wRXh0OkFydHdvcmtUaXRsZT5VbnRpdGxlZCBBcnR3b3JrPC9JcHRjNHhtcEV4dDpBcnR3b3JrVGl0bGU+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoQxHVIAAAETklEQVR4Ae2ZP07kMBSHh9XuMSiQpqKhpIZLUCDmDnQcgYZLgCjoOAHUlDRUI1HQUVAv0kpsfrP7ojcPJ3nOXzv6WQI7ifNsf1/sOLBYMJEACZAACZAACZAACZDA7AnszH6E/wd4cnLyFTPWu7u7SdhM0mgMmLZ1YwTc399vNfP5+TkZl8ka3iLQ40EbEVMKsEOfjZAYEYCAWZGSCBEzCyFzkQEpWQuJFYEBpzoz0DekH/+y/H63kZHDKH/m0Enbxy4y2rw3urSn++7ZSme3ZNXB2dvb0+PfKl9eXjaOtS72VrDIg0LEr+KWP57bspohIWB1EgCgSUQopgecp476vnHJQMzGp8bT8Bh1LLgmEehTnQwbr+8xtN08ZCFEw0tdBMS2lYF7kxciMjwiMKApZwXa7yID9yctpC8ZEgcDHjJ1lYG+Jf0dgllhZ0bVDKg6P5aMvkQnu8u6uLj49ufyEPTQOcDJTYQITVaIdFByC94eSz3kVTLsbNP36PLr66s+HLWc5DvEzo46+JaWleGVYON4j7W8Pt4h2cwQDyAtw4p4enryhHDVOTw8LOvpds7Pzxe3t7dfb29vrR/02QgRGQLICtAQS5otCzY2wkj809PTTlKSFrK/v+9CBhkQAVDv7+8bOALIFSCyUii2ltRFSrJCvDLAUmZFCFQk69bVdduQs1wuEWuzU4xZwlqvda177rzx+vq63PauVqvKftoNgDN8b9WKd4YrlldKsjPENcpAJb102Mv6KbbXYo9FhBe0N/7shNRBt7Lq6lYBHEqEtJe1kNjlygrQguw1AaRzyOh7Ruj4KGctBAOIefmj/svLC7JN0hJEjj4n9cbMsxYSKwNg5R4tBudFxNRikhZydnYGVotil7XJ+/wlYhBTy5laTOV2ss/Bt4n1VSS5b6dIUpZcb4vlXNdci5FYesaM8Q5J+v8hAmWsXM8aaRMzBj8Qgy/w3d3d8kGROn3mSS9ZfQ60KdbV1VVZ5ePjoyxDApJIKS8MVPi2FAzUTnTYuiWrr+VKS3h+fg6ysDMCfxJZr9eDbX+TnCF1MqLNmhs8EvQtge+OQZes4FOhOzRFuUmIvo7+3dzcuLoJGVUzwRVghEpJCwntrqwMzahKjMyK1GVgLMkJEeAhGeiwXEc5lKyUHGaFHkdy75AqEeh0kww9MJRzk4E+z+47RL7uMbhC4G/kTAMQwOzwJmyLDw4OBt0NDTDEfEJ6Reh6R0dHFDKEYg3ZW85ZRnIvdSv1+PjYniqPHx4eyvJcCskLeXx8rNyaF7LKZWmOcrJ+yLBM4Qcp5yUrawmhzlNKiMrE52S2TNwNNk8CJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJEACJJAlgb+4yTWeJkXynwAAAABJRU5ErkJggg=='
+},
+  ];
+
+  let W = 0, H = 0;
+  let registry = {};      // id -> {name, imageData, clusterIdByPixel, baseSections}
+  let order = [];         // back -> front
+  let visible = {};       // id -> bool
+  let hexes = {};         // id -> {sectionId: hex}
+  let offsets = {};       // id -> {x, y} pixel offset
+  let selectedId = null;  // currently selected layer for repositioning
+  let nextId = 1;
+  const expanded = new Set();
+
+  let undoStack = [];
+  let redoStack = [];
+  let dragCaptured = false; // guards one history push per color-drag gesture
+
+  // ---------- helpers ----------
+  function rgbToHex(r,g,b){ return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
+  function hexToRgb(hex){
+    hex = hex.replace('#','');
+    return [parseInt(hex.substring(0,2),16), parseInt(hex.substring(2,4),16), parseInt(hex.substring(4,6),16)];
+  }
+  function dist2(a,r,g,b){ const dr=a[0]-r, dg=a[1]-g, db=a[2]-b; return dr*dr+dg*dg+db*db; }
+
+  function detectClusters(imageData, tol){
+    const data = imageData.data;
+    const n = imageData.width * imageData.height;
+    const freq = new Map();
+    for(let i=0;i<n;i++){
+      const a = data[i*4+3];
+      if(a < 10) continue;
+      const key = data[i*4]+','+data[i*4+1]+','+data[i*4+2];
+      freq.set(key, (freq.get(key)||0)+1);
+    }
+    const sorted = [...freq.entries()].sort((a,b)=>b[1]-a[1]);
+    const tol2 = tol*tol;
+    const clusters = [];
+    for(const [key,count] of sorted){
+      const [r,g,b] = key.split(',').map(Number);
+      let matched = false;
+      for(const c of clusters){
+        if(dist2(c.color,r,g,b) <= tol2){ c.count += count; matched = true; break; }
+      }
+      if(!matched){
+        clusters.push({color:[r,g,b], count});
+        if(clusters.length >= 24) break;
+      }
+    }
+    const total = sorted.reduce((s,e)=>s+e[1],0) || 1;
+    let filtered = clusters.filter(c => c.count/total > 0.0015);
+    if(filtered.length === 0) filtered = clusters.slice(0,1);
+
+    const clusterIdByPixel = new Int16Array(n).fill(-1);
+    for(let i=0;i<n;i++){
+      const a = data[i*4+3];
+      if(a < 10) continue;
+      const r=data[i*4], g=data[i*4+1], b=data[i*4+2];
+      let best=-1, bestD=Infinity;
+      for(let ci=0; ci<filtered.length; ci++){
+        const d = dist2(filtered[ci].color, r,g,b);
+        if(d<bestD){ bestD=d; best=ci; }
+      }
+      clusterIdByPixel[i]=best;
+    }
+    const sections = filtered.map((c,idx)=>({id:idx, color:c.color.slice(), hex:rgbToHex(...c.color)}));
+    return {clusterIdByPixel, sections};
+  }
+
+  function loadImageFromFile(file, cb){
+    const reader = new FileReader();
+    reader.onload = e => { const img = new Image(); img.onload = () => cb(img); img.src = e.target.result; };
+    reader.readAsDataURL(file);
+  }
+
+  // ---------- history ----------
+  function snapshotState(){
+    return JSON.parse(JSON.stringify({ order, visible, hexes, offsets }));
+  }
+  function restoreState(s){
+    order = s.order.slice(); visible = {...s.visible}; hexes = JSON.parse(JSON.stringify(s.hexes));
+    offsets = JSON.parse(JSON.stringify(s.offsets || {}));
+    if(selectedId && order.indexOf(selectedId) === -1) selectedId = null;
+    recomputeProjectSize();
+    syncCanvasPixelSize();
+    buildLayerListUI();
+    renderAll();
+    updateHistoryButtons();
+  }
+  function pushHistory(){
+    undoStack.push(snapshotState());
+    if(undoStack.length > 80) undoStack.shift();
+    redoStack.length = 0;
+    updateHistoryButtons();
+  }
+  function undo(){
+    if(!undoStack.length) return;
+    redoStack.push(snapshotState());
+    restoreState(undoStack.pop());
+  }
+  function redo(){
+    if(!redoStack.length) return;
+    undoStack.push(snapshotState());
+    restoreState(redoStack.pop());
+  }
+  function updateHistoryButtons(){
+    undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
+  }
+  undoBtn.addEventListener('click', undo);
+  redoBtn.addEventListener('click', redo);
+  document.addEventListener('keydown', e=>{
+    const mod = e.ctrlKey || e.metaKey;
+    if(mod){
+      if(e.key.toLowerCase() === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
+      else if((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); }
+      return;
+    }
+    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+    if(activeTag === 'INPUT' || activeTag === 'TEXTAREA') return; // don't hijack typing/cursor movement
+    if(!selectedId) return;
+    let dx = 0, dy = 0;
+    if(e.key === 'ArrowUp') dy = -1;
+    else if(e.key === 'ArrowDown') dy = 1;
+    else if(e.key === 'ArrowLeft') dx = -1;
+    else if(e.key === 'ArrowRight') dx = 1;
+    else return;
+    e.preventDefault();
+    nudgeSelected(dx, dy, e.repeat);
+  });
+
+  // ---------- canvas sizing ----------
+  function recomputeProjectSize(){
+    let w = 0, h = 0;
+    order.forEach(id=>{
+      const r = registry[id];
+      if(r){ w = Math.max(w, r.w); h = Math.max(h, r.h); }
+    });
+    W = w; H = h;
+  }
+  function syncCanvasPixelSize(){
+    const hasLayers = W > 0 && H > 0;
+    outCanvas.style.display = hasLayers ? 'block' : 'none';
+    emptyHint.style.display = hasLayers ? 'none' : 'block';
+    if(!hasLayers) return;
+    outCanvas.width = W;
+    outCanvas.height = H;
+    applyZoom();
+  }
+  function applyZoom(){
+    const z = parseInt(zoomSlider.value,10);
+    zoomVal.textContent = z + 'x';
+    outCanvas.style.width = (W*z)+'px';
+    outCanvas.style.height = (H*z)+'px';
+  }
+  zoomSlider.addEventListener('input', applyZoom);
+  tolSlider.addEventListener('input', ()=>{ tolVal.textContent = tolSlider.value; });
+
+  // ---------- add / remove / reorder layers ----------
+  function wireDrop(dropEl, inputEl, onFile){
+    inputEl.addEventListener('change', e=>{ if(e.target.files[0]) onFile(e.target.files[0]); });
+    ['dragover','dragenter'].forEach(evt=> dropEl.addEventListener(evt, e=>{ e.preventDefault(); dropEl.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(evt=> dropEl.addEventListener(evt, e=>{ e.preventDefault(); dropEl.classList.remove('drag'); }));
+    dropEl.addEventListener('drop', e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) onFile(f); });
+  }
+
+  function addLayerFromFile(file, displayName){
+    loadImageFromFile(file, img=> addLayerFromImage(img, displayName || file.name));
+  }
+
+  function addLayerFromImage(img, name){
+    const wasEmpty = order.length === 0;
+    // Draw at the image's own native pixel size — no resampling, no forced scaling.
+    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const octx = off.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    octx.drawImage(img, 0, 0);
+    const imageData = octx.getImageData(0,0,w,h);
+    const tol = parseInt(tolSlider.value,10);
+    const { clusterIdByPixel, sections } = detectClusters(imageData, tol);
+
+    const id = 'L' + (nextId++);
+    registry[id] = { name, w, h, imageData, clusterIdByPixel, baseSections: sections };
+    const initHex = {};
+    sections.forEach(s => initHex[s.id] = s.hex);
+
+    pushHistory();
+    order.push(id);
+    visible[id] = true;
+    hexes[id] = initHex;
+    offsets[id] = { x: 0, y: 0 };
+    expanded.add(id);
+    selectedId = id;
+
+    recomputeProjectSize();
+    syncCanvasPixelSize();
+    if(wasEmpty){
+      // Auto-fit zoom so the first layer lands on screen at a sane size either way.
+      const fit = Math.max(1, Math.min(24, Math.floor(480 / Math.max(W, H))));
+      zoomSlider.value = fit;
+      applyZoom();
+    }
+    buildLayerListUI();
+    renderAll();
+  }
+
+  wireDrop(dropLayer, layerInput, file => addLayerFromFile(file));
+
+  function moveLayer(id, dir){
+    const idx = order.indexOf(id);
+    const target = idx + (dir === 'up' ? 1 : -1);
+    if(target < 0 || target >= order.length) return;
+    pushHistory();
+    [order[idx], order[target]] = [order[target], order[idx]];
+    buildLayerListUI();
+    renderAll();
+  }
+  function toggleVisible(id){
+    pushHistory();
+    visible[id] = !visible[id];
+    buildLayerListUI();
+    renderAll();
+  }
+  function removeLayer(id){
+    pushHistory();
+    order = order.filter(x => x !== id);
+    if(selectedId === id) selectedId = null;
+    recomputeProjectSize();
+    syncCanvasPixelSize();
+    buildLayerListUI();
+    renderAll();
+  }
+  function renameLayer(id, newName){
+    pushHistory();
+    registry[id].name = newName;
+  }
+  function rescanLayer(id){
+    const reg = registry[id];
+    const tol = parseInt(tolSlider.value,10);
+    const { clusterIdByPixel, sections } = detectClusters(reg.imageData, tol);
+    pushHistory();
+    reg.clusterIdByPixel = clusterIdByPixel;
+    reg.baseSections = sections;
+    const initHex = {};
+    sections.forEach(s => initHex[s.id] = s.hex);
+    hexes[id] = initHex;
+    buildLayerListUI();
+    renderAll();
+  }
+  function resetLayerColors(id){
+    pushHistory();
+    const initHex = {};
+    registry[id].baseSections.forEach(s => initHex[s.id] = s.hex);
+    hexes[id] = initHex;
+    buildLayerListUI();
+    renderAll();
+  }
+
+  function selectLayer(id){
+    selectedId = id;
+    buildLayerListUI();
+    updateRepoUI();
+  }
+
+  function nudgeSelected(dx, dy, isRepeat){
+    if(!selectedId || !registry[selectedId]) return;
+    if(!isRepeat) pushHistory();
+    const o = offsets[selectedId] || { x: 0, y: 0 };
+    o.x += dx; o.y += dy;
+    offsets[selectedId] = o;
+    renderAll();
+    updateRepoUI();
+  }
+
+  function updateRepoUI(){
+    const has = !!(selectedId && registry[selectedId]);
+    repoSelName.textContent = has ? registry[selectedId].name : 'no layer selected';
+    const o = has ? (offsets[selectedId] || {x:0,y:0}) : {x:0,y:0};
+    repoOffset.textContent = `x: ${o.x}, y: ${o.y}`;
+    [nudgeUp, nudgeDown, nudgeLeft, nudgeRight, repoResetBtn].forEach(btn => btn.disabled = !has);
+  }
+
+  nudgeUp.addEventListener('click', ()=> nudgeSelected(0, -1, false));
+  nudgeDown.addEventListener('click', ()=> nudgeSelected(0, 1, false));
+  nudgeLeft.addEventListener('click', ()=> nudgeSelected(-1, 0, false));
+  nudgeRight.addEventListener('click', ()=> nudgeSelected(1, 0, false));
+  repoResetBtn.addEventListener('click', ()=>{
+    if(!selectedId) return;
+    pushHistory();
+    offsets[selectedId] = { x: 0, y: 0 };
+    renderAll();
+    updateRepoUI();
+  });
+
+  // ---------- layer list UI ----------
+  function buildLayerListUI(){
+    layersEl.innerHTML = '';
+    if(order.length === 0){
+      layersEl.innerHTML = '<div class="empty-note">No layers yet — add your first PNG above.</div>';
+      updateRepoUI();
+      return;
+    }
+    const display = order.slice().reverse(); // front-most first
+    display.forEach(id=>{
+      const reg = registry[id];
+      if(!reg) return;
+      const idx = order.indexOf(id);
+      const isTop = idx === order.length - 1;
+      const isBottom = idx === 0;
+      const isExpanded = expanded.has(id);
+
+      const card = document.createElement('div');
+      card.className = 'layer-card' + (id === selectedId ? ' selected' : '');
+      card.addEventListener('click', ()=> selectLayer(id));
+
+      const head = document.createElement('div');
+      head.className = 'layer-head';
+      head.innerHTML = `
+        <div class="order-btns">
+          <button class="icon-btn" data-act="up" ${isTop?'disabled':''} title="Bring forward">▲</button>
+          <button class="icon-btn" data-act="down" ${isBottom?'disabled':''} title="Send backward">▼</button>
+        </div>
+        <input type="checkbox" class="vis-toggle" ${visible[id] ? 'checked' : ''} title="Show/hide layer">
+        <input type="text" class="layer-name" value="${reg.name.replace(/"/g,'&quot;')}">
+        <button class="icon-btn" data-act="expand" title="Show sections">${isExpanded ? '−' : '+'}</button>
+        <button class="icon-btn danger" data-act="remove" title="Remove layer">✕</button>
+      `;
+      card.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'layer-body' + (isExpanded ? '' : ' collapsed');
+      const secWrap = document.createElement('div');
+      reg.baseSections.forEach(s=>{
+        const hex = hexes[id][s.id] || s.hex;
+        const row = document.createElement('div');
+        row.className = 'sec-row';
+        row.innerHTML = `
+          <div class="swatch-wrap"><input type="color" value="${hex}" data-sec="${s.id}"></div>
+          <div class="sec-meta">
+            <div class="sec-name">Section ${s.id+1}</div>
+            <input class="sec-hex" data-sec="${s.id}" value="${hex}">
+          </div>
+        `;
+        secWrap.appendChild(row);
+      });
+      body.appendChild(secWrap);
+
+      const foot = document.createElement('div');
+      foot.className = 'layer-foot';
+      foot.innerHTML = `<button data-act="rescan">Re-scan sections</button><button data-act="resetcolors">Reset colors</button>`;
+      body.appendChild(foot);
+
+      card.appendChild(body);
+      layersEl.appendChild(card);
+
+      // wire head controls
+      head.querySelector('[data-act="up"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'up'); });
+      head.querySelector('[data-act="down"]').addEventListener('click', e=>{ e.stopPropagation(); moveLayer(id,'down'); });
+      head.querySelector('.vis-toggle').addEventListener('click', e=> e.stopPropagation());
+      head.querySelector('.vis-toggle').addEventListener('change', ()=> toggleVisible(id));
+      head.querySelector('[data-act="remove"]').addEventListener('click', e=>{ e.stopPropagation(); removeLayer(id); });
+      head.querySelector('[data-act="expand"]').addEventListener('click', e=>{
+        e.stopPropagation();
+        if(expanded.has(id)) expanded.delete(id); else expanded.add(id);
+        selectLayer(id);
+      });
+      const nameInput = head.querySelector('.layer-name');
+      nameInput.addEventListener('change', ()=> renameLayer(id, nameInput.value.trim() || reg.name));
+
+      // wire section color controls
+      body.querySelectorAll('input[type=color]').forEach(inp=>{
+        inp.addEventListener('pointerdown', ()=>{ if(!dragCaptured){ pushHistory(); dragCaptured = true; } });
+        inp.addEventListener('input', e=>{
+          const sec = e.target.dataset.sec;
+          hexes[id][sec] = e.target.value;
+          const hexField = body.querySelector(`.sec-hex[data-sec="${sec}"]`);
+          if(hexField) hexField.value = e.target.value;
+          renderAll();
+        });
+        inp.addEventListener('change', ()=>{ dragCaptured = false; });
+      });
+      body.querySelectorAll('.sec-hex').forEach(inp=>{
+        inp.addEventListener('change', e=>{
+          let v = e.target.value.trim();
+          if(v[0] !== '#') v = '#'+v;
+          if(!/^#[0-9a-fA-F]{6}$/.test(v)){ e.target.value = hexes[id][e.target.dataset.sec]; return; }
+          pushHistory();
+          const sec = e.target.dataset.sec;
+          hexes[id][sec] = v;
+          const colorField = body.querySelector(`input[type=color][data-sec="${sec}"]`);
+          if(colorField) colorField.value = v;
+          renderAll();
+        });
+      });
+      foot.querySelector('[data-act="rescan"]').addEventListener('click', ()=> rescanLayer(id));
+      foot.querySelector('[data-act="resetcolors"]').addEventListener('click', ()=> resetLayerColors(id));
+    });
+    updateRepoUI();
+  }
+
+  // ---------- premade image library ----------
+  function buildLibraryUI(filterTerm){
+    const grid = document.getElementById('libraryGrid');
+    const term = (filterTerm || '').trim().toLowerCase();
+    grid.innerHTML = '';
+    if(PREMADE_LIBRARY.length === 0){
+      grid.innerHTML = '<div class="empty-note">No premade images yet — see the PREMADE_LIBRARY array near the top of the script.</div>';
+      return;
+    }
+    const matches = term
+      ? PREMADE_LIBRARY.filter(item => item.name.toLowerCase().includes(term))
+      : PREMADE_LIBRARY;
+    if(matches.length === 0){
+      const none = document.createElement('div');
+      none.className = 'empty-note';
+      none.textContent = 'No matches for "' + term + '".';
+      grid.appendChild(none);
+      return;
+    }
+    matches.forEach(item=>{
+      const isEmpty = !item.src;
+      const card = document.createElement('div');
+      card.className = 'lib-item' + (isEmpty ? ' empty' : '');
+
+      const thumb = document.createElement('div');
+      thumb.className = 'lib-thumb';
+      if(isEmpty){
+        thumb.innerHTML = '<span class="lib-placeholder">empty</span>';
+      } else {
+        const img = document.createElement('img');
+        img.src = item.src;
+        img.alt = item.name;
+        thumb.appendChild(img);
+      }
+      card.appendChild(thumb);
+
+      const label = document.createElement('div');
+      label.className = 'lib-name';
+      label.textContent = item.name;
+      card.appendChild(label);
+
+      if(!isEmpty){
+        card.title = 'Click to add "' + item.name + '" as a new layer';
+        card.addEventListener('click', ()=>{
+          const img = new Image();
+          img.onload = () => addLayerFromImage(img, item.name);
+          img.src = item.src;
+        });
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------- rendering ----------
+  function renderLayerCanvas(reg, hexMap){
+    // Rendered at this layer's own native resolution — never resampled.
+    const out = document.createElement('canvas');
+    out.width = reg.w; out.height = reg.h;
+    const octx = out.getContext('2d');
+    const imgData = octx.createImageData(reg.w, reg.h);
+    const src = reg.imageData.data;
+    const dst = imgData.data;
+    const colorMap = {};
+    reg.baseSections.forEach(s=>{ colorMap[s.id] = hexToRgb((hexMap && hexMap[s.id]) || s.hex); });
+    const n = reg.w * reg.h;
+    for(let i=0;i<n;i++){
+      const a = src[i*4+3];
+      if(a < 10) continue;
+      const cid = reg.clusterIdByPixel[i];
+      const col = (cid>=0 && colorMap[cid]) ? colorMap[cid] : [src[i*4],src[i*4+1],src[i*4+2]];
+      dst[i*4]=col[0]; dst[i*4+1]=col[1]; dst[i*4+2]=col[2]; dst[i*4+3]=a;
+    }
+    octx.putImageData(imgData,0,0);
+    return out;
+  }
+
+  function renderAll(){
+    ctx.clearRect(0,0,outCanvas.width, outCanvas.height);
+    if(W===0 || H===0) return;
+    for(const id of order){
+      if(!visible[id]) continue;
+      const reg = registry[id];
+      if(!reg) continue;
+      const off = offsets[id] || {x:0,y:0};
+      ctx.drawImage(renderLayerCanvas(reg, hexes[id]), off.x, off.y);
+    }
+  }
+
+  // ---------- background preview swatches ----------
+  document.querySelectorAll('.bg-swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.bg-swatch').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      if(btn.dataset.bg === 'checker'){
+        canvasHolder.classList.add('checker-bg');
+        canvasHolder.style.background = '';
+        canvasHolder.classList.add('checker-bg');
+      } else {
+        canvasHolder.classList.remove('checker-bg');
+        canvasHolder.style.background = btn.dataset.bg;
+      }
+    });
+  });
+  document.getElementById('customBg').addEventListener('input', e=>{
+    document.querySelectorAll('.bg-swatch').forEach(b=>b.classList.remove('active'));
+    canvasHolder.classList.remove('checker-bg');
+    canvasHolder.style.background = e.target.value;
+  });
+
+  // ---------- global actions ----------
+  document.getElementById('randomBtn').addEventListener('click', ()=>{
+    if(order.length === 0) return;
+    pushHistory();
+    order.forEach(id=>{
+      registry[id].baseSections.forEach(s=>{
+        const r = Math.floor(Math.random()*200+30), g = Math.floor(Math.random()*200+30), b = Math.floor(Math.random()*200+30);
+        hexes[id][s.id] = rgbToHex(r,g,b);
+      });
+    });
+    buildLayerListUI();
+    renderAll();
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(order.length === 0) return;
+    pushHistory();
+    order.forEach(id=>{
+      const initHex = {};
+      registry[id].baseSections.forEach(s=> initHex[s.id]=s.hex);
+      hexes[id] = initHex;
+    });
+    buildLayerListUI();
+    renderAll();
+  });
+
+  // ---------- export (in-page modal, sandbox-safe) ----------
+  exportBtn.addEventListener('click', ()=>{
+    if(W===0 || H===0) return;
+    renderAll();
+    exportImg.src = outCanvas.toDataURL('image/png');
+    exportModal.classList.add('show');
+  });
+  closeModal.addEventListener('click', ()=> exportModal.classList.remove('show'));
+  exportModal.addEventListener('click', e=>{ if(e.target === exportModal) exportModal.classList.remove('show'); });
+
+  // ---------- initial (blank) state ----------
+  buildLayerListUI();
+  buildLibraryUI();
+  document.getElementById('librarySearch').addEventListener('input', e=>{
+    buildLibraryUI(e.target.value);
+  });
+  syncCanvasPixelSize();
+  updateHistoryButtons();
+})();
+</script>
+</body>
+</html>
